@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MySQL Studio | Recruitment Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="h-full flex flex-col font-sans antialiased overflow-hidden selection:bg-brand-600 selection:text-white bg-slate-50/70">
+
+  <!-- Header -->
+  <header class="h-16 border-b border-slate-200/80 glass-header px-6 flex items-center justify-between z-20 shadow-xs">
+    <div class="flex items-center space-x-3.5">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-blue-500 flex items-center justify-center shadow-md shadow-brand-500/20 text-white">
+        <i data-lucide="layers" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="text-sm font-extrabold tracking-tight text-slate-900">
+            MySQL Studio
+          </h1>
+          <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-brand-700 border border-blue-200/80 tracking-wide">
+            ENTERPRISE
+          </span>
+        </div>
+        <div class="flex items-center space-x-1.5 text-xs text-slate-500">
+          <span class="font-medium text-slate-600" id="headerDbCrumb">recruitmentdb</span>
+          <span class="text-slate-300">/</span>
+          <span class="font-mono text-brand-700 font-semibold" id="headerActiveTableCrumb">candidate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="flex items-center space-x-3">
+      <!-- Status Badge -->
+      <div id="connectionStatusBadge" class="flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-50 border border-emerald-200/80 text-emerald-700 shadow-2xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="statusDot"></span>
+        <span id="statusText" class="font-mono">Connected: recruitmentdb</span>
+      </div>
+
+      <!-- Settings Button -->
+      <button onclick="openSettingsModal()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition shadow-xs hover:border-slate-300">
+        <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
+        <span>Settings</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Body Container -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- Sidebar: Tables & Navigation -->
+    <aside class="w-72 border-r border-slate-200/80 bg-white flex flex-col flex-shrink-0 z-10">
+      
+      <!-- Quick Navigation Tabs -->
+      <div class="p-3 border-b border-slate-100 space-y-1">
+        <button id="navTablesBtn" onclick="switchMainView('tables')" class="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold bg-brand-50 text-brand-700 border border-brand-200/70 transition shadow-2xs">
+          <div class="flex items-center space-x-2.5">
+            <i data-lucide="database" class="w-4 h-4 text-brand-600"></i>
+            <span>Database Tables</span>
+          </div>
+          <span id="tableCountBadge" class="text-[10px] bg-brand-200/60 text-brand-800 font-extrabold px-1.5 py-0.5 rounded-md">13</span>
+        </button>
+        <button id="navQueryBtn" onclick="switchMainView('query')" class="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition">
+          <i data-lucide="terminal" class="w-4 h-4 text-slate-400"></i>
+          <span>SQL Query Console</span>
+        </button>
+      </div>
+
+      <!-- Table Filter Search -->
+      <div class="px-3 py-2.5 border-b border-slate-100" id="tableFilterSection">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+          <input type="text" id="tableSearchInput" placeholder="Filter tables..." oninput="filterTableList()" class="w-full bg-slate-50/80 border border-slate-200 text-slate-800 placeholder-slate-400 text-xs rounded-lg pl-8 pr-8 py-1.5 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/15 transition">
+          <kbd class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[9px] font-mono text-slate-400 bg-white px-1 py-0.5 rounded border border-slate-200">/</kbd>
+        </div>
+      </div>
+
+      <!-- Tables List -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1" id="tablesListContainer">
+        <!-- Rendered dynamically -->
+        <div class="text-center py-10 px-4 text-xs text-slate-400">
+          <i data-lucide="loader-2" class="w-5 h-5 mx-auto mb-2 animate-spin text-brand-500"></i>
+          Loading tables...
+        </div>
+      </div>
+
+      <!-- Sidebar footer -->
+      <div class="p-3 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center space-x-1.5 truncate">
+          <span class="w-2 h-2 rounded-full bg-brand-500"></span>
+          <span id="currentDbLabel" class="font-semibold text-slate-700 truncate">recruitmentdb</span>
+        </div>
+        <button onclick="fetchTables()" class="hover:text-brand-600 p-1.5 rounded-md hover:bg-white border border-transparent hover:border-slate-200 transition" title="Refresh Tables">
+          <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 flex flex-col bg-slate-50/50 overflow-hidden relative" id="mainContent">
+      
+      <!-- VIEW 1: TABLE DATA VIEW -->
+      <div id="tableView" class="flex-1 flex flex-col overflow-hidden">
+        
+        <!-- Table Header Bar -->
+        <div class="p-4 border-b border-slate-200 bg-white flex items-center justify-between flex-wrap gap-3 shadow-xs">
+          <div class="flex items-center space-x-3">
+            <div id="tableHeaderIcon" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-50 to-blue-100 border border-blue-200/80 flex items-center justify-center text-brand-600 shadow-2xs">
+              <i data-lucide="table" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center space-x-2">
+                <h2 id="activeTableName" class="text-base font-extrabold text-slate-900 tracking-tight">candidate</h2>
+                <span id="activeTableRowCount" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-brand-700 font-bold border border-blue-200">13 records</span>
+              </div>
+              <p class="text-xs text-slate-500" id="activeTableDesc">Live records with connected relations and schema</p>
+            </div>
+          </div>
+
+          <!-- Controls (Search, Export, Add, Refresh) -->
+          <div class="flex items-center space-x-2" id="tableActionControls">
+            <!-- Search -->
+            <div class="relative">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2"></i>
+              <input type="text" id="recordSearchInput" placeholder="Search rows..." onkeydown="handleSearchKey(event)" class="bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 text-xs rounded-lg pl-8 pr-7 py-2 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/15 transition w-52 shadow-2xs">
+              <button onclick="clearSearch()" id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Export to CSV -->
+            <button onclick="exportTableToCsv()" class="flex items-center space-x-1.5 px-3 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-50 transition text-xs font-semibold shadow-2xs hover:border-slate-300" title="Export current rows to CSV">
+              <i data-lucide="download" class="w-3.5 h-3.5 text-slate-500"></i>
+              <span>Export CSV</span>
+            </button>
+
+            <!-- Refresh -->
+            <button onclick="loadTableData()" class="p-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition shadow-2xs hover:border-slate-300" title="Refresh Table">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            </button>
+
+            <!-- Special Workflow Button for Candidate & Application -->
+            <button id="candidateAppWorkflowBtn" onclick="openCandidateAppModal()" class="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-50 text-brand-700 hover:bg-blue-100/80 border border-blue-200 transition shadow-2xs hover:border-blue-300">
+              <i data-lucide="user-plus" class="w-4 h-4 text-brand-600"></i>
+              <span>+ Candidate & Application</span>
+            </button>
+
+            <!-- Add Record Button -->
+            <button onclick="openAddModal()" class="flex items-center space-x-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white shadow-sm shadow-brand-500/25 transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Add Record</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Data Content Container -->
+        <div class="flex-1 overflow-auto relative p-4 flex flex-col space-y-3" id="tableDataWrapper">
+          
+          <!-- Empty / Welcome State -->
+          <div id="noTableSelectedState" class="h-full flex flex-col items-center justify-center p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200 table-card">
+            <div class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-4 text-brand-600 shadow-sm">
+              <i data-lucide="database" class="w-8 h-8"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800 mb-1">No Table Selected</h3>
+            <p class="text-xs text-slate-500 max-w-sm mb-4">Select a table from the sidebar to browse, search, insert, update, or delete records.</p>
+            <button onclick="openSettingsModal()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 transition shadow-xs">
+              Configure Connection
+            </button>
+          </div>
+
+          <!-- Dynamic Table Content Card -->
+          <div class="bg-white rounded-2xl border border-slate-200/90 table-card overflow-x-auto flex-1" id="tableCardContainer">
+            <table class="min-w-max w-full text-left text-xs border-collapse hidden" id="recordsTable">
+              <thead class="bg-slate-50/95 backdrop-blur sticky top-0 z-10 border-b border-slate-200 text-slate-600" id="recordsThead">
+                <!-- Rendered dynamically -->
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-slate-800 font-mono text-[11px]" id="recordsTbody">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        <div class="h-14 border-t border-slate-200 bg-white px-6 flex items-center justify-between text-xs text-slate-600 shadow-xs" id="paginationBar" style="display: none;">
+          <div class="flex items-center space-x-4">
+            <span id="paginationInfo" class="font-semibold text-slate-700">Showing 0 of 0</span>
+            <div class="flex items-center space-x-1.5">
+              <span class="text-slate-400">Rows:</span>
+              <select id="limitSelect" onchange="changeLimit(this.value)" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 font-semibold focus:outline-none focus:border-brand-500">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button onclick="changePage(-1)" id="prevPageBtn" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1 shadow-2xs">
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+              <span>Prev</span>
+            </button>
+            <span class="px-3 py-1 font-bold text-brand-700 bg-blue-50/60 rounded-lg border border-blue-100" id="currentPageIndicator">Page 1</span>
+            <button onclick="changePage(1)" id="nextPageBtn" class="px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center space-x-1 shadow-2xs">
+              <span>Next</span>
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 2: SQL QUERY CONSOLE -->
+      <div id="queryView" class="flex-1 flex flex-col overflow-hidden hidden p-5 space-y-4">
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 table-card">
+          <div class="flex items-center justify-between mb-3.5">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white flex items-center justify-center shadow-sm">
+                <i data-lucide="terminal" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">SQL Query Console</h2>
+                <p class="text-xs text-slate-500">Execute custom statements with performance timing</p>
+              </div>
+            </div>
+            <button onclick="executeSqlQuery()" class="flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white shadow-sm shadow-brand-500/25 transition">
+              <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+              <span>Run Query (Ctrl+Enter)</span>
+            </button>
+          </div>
+
+          <textarea id="sqlInput" rows="4" placeholder="SELECT * FROM candidate LIMIT 10;" class="w-full bg-slate-50/80 font-mono text-xs border border-slate-200 rounded-xl p-3.5 text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 transition resize-none"></textarea>
+          <div class="flex justify-between items-center mt-2 text-[11px] text-slate-500">
+            <span>Shortcut: Press <kbd class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-sans font-semibold">Ctrl</kbd> + <kbd class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-sans font-semibold">Enter</kbd></span>
+            <span id="queryStats" class="font-semibold text-slate-600"></span>
+          </div>
+        </div>
+
+        <!-- Query Output -->
+        <div class="flex-1 bg-white rounded-2xl border border-slate-200 overflow-auto p-4 table-card" id="queryResultArea">
+          <div class="h-full flex items-center justify-center text-xs text-slate-400">
+            Query results will appear here
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL: CONNECTION SETTINGS -->
+  <div id="settingsModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-md bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden modal-enter">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center border border-blue-200/60">
+            <i data-lucide="database" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Database Connection</h3>
+            <p class="text-[11px] text-slate-500">Configure your local MySQL server</p>
+          </div>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="connectionForm" onsubmit="handleConnectionSubmit(event)" class="p-6 space-y-4">
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block text-xs font-bold text-slate-700 mb-1">Host</label>
+            <input type="text" id="cfgHost" value="localhost" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">Port</label>
+            <input type="number" id="cfgPort" value="3306" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">User</label>
+          <input type="text" id="cfgUser" value="root" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Password</label>
+          <input type="password" id="cfgPassword" placeholder="Enter MySQL root password" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Database Name</label>
+          <div class="flex space-x-2">
+            <input type="text" id="cfgDatabase" placeholder="e.g. recruitmentdb" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+            <button type="button" onclick="testConnectionAndLoadDatabases()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-semibold text-slate-700 whitespace-nowrap border border-slate-200 transition">
+              List DBs
+            </button>
+          </div>
+          <select id="cfgDatabaseSelect" onchange="document.getElementById('cfgDatabase').value = this.value" class="mt-2 w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-800 hidden focus:outline-none">
+            <option value="">-- Choose Discovered Database --</option>
+          </select>
+        </div>
+
+        <div id="connMsg" class="text-xs p-3 rounded-xl hidden font-medium"></div>
+
+        <div class="pt-2 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeSettingsModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition">
+            Cancel
+          </button>
+          <button type="submit" id="saveConnBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white transition flex items-center space-x-1.5 shadow-sm shadow-brand-500/25">
+            <span>Connect & Save</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT RECORD -->
+  <div id="recordModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] modal-enter">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center space-x-2.5">
+          <div id="recordModalIcon" class="w-8 h-8 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center border border-blue-200/60">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </div>
+          <h3 class="text-sm font-bold text-slate-900" id="recordModalTitle">Add Record</h3>
+        </div>
+        <button onclick="closeRecordModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="recordForm" onsubmit="handleRecordFormSubmit(event)" class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="recordFormFields">
+          <!-- Dynamically populated fields -->
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeRecordModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white border border-slate-200 transition">
+            Cancel
+          </button>
+          <button type="submit" id="saveRecordBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white transition shadow-sm shadow-brand-500/25">
+            Save Record
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: REGISTER CANDIDATE & CREATE APPLICATION -->
+  <div id="candidateAppModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] modal-enter">
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center space-x-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-blue-500 text-white flex items-center justify-center shadow-xs">
+            <i data-lucide="user-plus" class="w-4.5 h-4.5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-extrabold text-slate-900">New Candidate & Application</h3>
+            <p class="text-[11px] text-slate-500">Atomic workflow linking Candidate, Job Application, and Skills in MySQL</p>
+          </div>
+        </div>
+        <button onclick="closeCandidateAppModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <form id="candidateAppForm" onsubmit="handleCandidateAppSubmit(event)" class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-6 space-y-5">
+          
+          <!-- Section 1: Candidate Details -->
+          <div>
+            <div class="flex items-center space-x-2 pb-2 mb-3 border-b border-slate-100">
+              <i data-lucide="user" class="w-4 h-4 text-brand-600"></i>
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">1. Candidate Information</h4>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Full Name <span class="text-rose-500">*</span></label>
+                <input type="text" id="candName" required placeholder="e.g. Maya Sharma" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Email Address <span class="text-rose-500">*</span></label>
+                <input type="email" id="candEmail" required placeholder="maya.sharma@example.com" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 mt-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                <input type="text" id="candPhone" placeholder="+91 9876543210" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Date of Birth</label>
+                <input type="date" id="candDob" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Gender</label>
+                <select id="candGender" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mt-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Address / Location</label>
+                <input type="text" id="candAddress" placeholder="e.g. Whitefield, Bengaluru" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Resume File / Path</label>
+                <input type="text" id="candResumePath" placeholder="/resumes/maya_sharma.pdf" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Section 2: Application Details -->
+          <div>
+            <div class="flex items-center space-x-2 pb-2 mb-3 border-b border-slate-100">
+              <i data-lucide="briefcase" class="w-4 h-4 text-brand-600"></i>
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">2. Job Application Details</h4>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Applying For (Vacancy) <span class="text-rose-500">*</span></label>
+                <select id="appVacancyId" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+                  <option value="">-- Select Vacancy --</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Application Status</label>
+                <select id="appStatus" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+                  <option value="Applied" selected>Applied</option>
+                  <option value="Interview">Interview</option>
+                  <option value="Selected">Selected</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Applied Date</label>
+                <input type="date" id="appAppliedOn" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500">
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label class="block text-xs font-bold text-slate-700 mb-1">Cover Letter / Notes (Optional)</label>
+              <textarea id="appCoverLetter" rows="2" placeholder="Brief note on candidate qualifications..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs text-slate-900 focus:outline-none focus:bg-white focus:border-brand-500"></textarea>
+            </div>
+          </div>
+
+          <!-- Section 3: Relevant Skills -->
+          <div>
+            <div class="flex items-center space-x-2 pb-2 mb-2 border-b border-slate-100">
+              <i data-lucide="award" class="w-4 h-4 text-brand-600"></i>
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">3. Candidate Skills (Optional)</h4>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-2">Select skills that apply to this candidate (automatically added to `candidate_skill`):</p>
+            <div id="skillsCheckboxContainer" class="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+              <!-- Dynamically populated skills -->
+            </div>
+          </div>
+
+        </div>
+
+        <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/60 flex items-center justify-end space-x-2">
+          <button type="button" onclick="closeCandidateAppModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-white border border-slate-200 transition">
+            Cancel
+          </button>
+          <button type="submit" id="saveCandidateAppBtn" class="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-brand-600 to-blue-600 hover:from-brand-700 hover:to-blue-700 text-white transition shadow-sm shadow-brand-500/25 flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Register & Create Application</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: DELETE CONFIRMATION -->
+  <div id="deleteModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+    <div class="w-full max-w-sm bg-white border border-slate-200 rounded-2xl shadow-2xl p-6 text-center modal-enter">
+      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 mx-auto flex items-center justify-center mb-3 border border-rose-100">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+      </div>
+      <h3 class="text-sm font-bold text-slate-900 mb-1">Delete Record?</h3>
+      <p class="text-xs text-slate-500 mb-5" id="deleteModalMessage">Are you sure you want to delete this row? This action cannot be undone.</p>
+      <div class="flex items-center justify-center space-x-2">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 transition">
+          Cancel
+        </button>
+        <button onclick="confirmDeleteRecord()" id="confirmDeleteBtn" class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/25 transition">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <section class="candidate-section">
+    <h2>Candidate Profiles</h2>
+    <p>Click on a candidate to view their profile and skills.</p>
+
+    <div id="candidateCards" class="candidate-cards"></div>
+</section>
+
+<div id="candidateModal" class="modal">
+    <div class="modal-content">
+
+        <button id="closeModal" class="close-button">&times;</button>
+
+        <h2 id="candidateName"></h2>
+
+        <p id="candidateEmail"></p>
+        <p id="candidatePhone"></p>
+
+        <h3>Skills</h3>
+        <div id="candidateSkills"></div>
+
+    </div>
+</div>
+  <script src="app.js"></script>
+</body>
+</html>
